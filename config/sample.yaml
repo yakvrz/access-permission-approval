@@ -1,0 +1,33 @@
+data:
+  users: tests/fixtures/small/users_metadata.csv
+  apps: tests/fixtures/small/apps_metadata.csv
+  interactions: tests/fixtures/small/interactions.csv
+  submission: tests/fixtures/small/submission.csv
+
+artifacts:
+  model_dir: models/sample
+  reports_dir: reports/sample
+
+features:
+  missing_sentinel: "__UNKNOWN__"
+  categorical_columns:
+    - appId
+    - managerId
+    - category
+    - department_filled
+    - office_filled
+    - manager_department
+    - manager_office
+
+model:
+  catboost:
+    iterations: 60
+    learning_rate: 0.1
+    depth: 6
+    l2_leaf_reg: 6
+    random_seed: 42
+  validation:
+    n_splits: 3
+    group_column: userId
+    target_column: permission
+    threshold_strategy: accuracy

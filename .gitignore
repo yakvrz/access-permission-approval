@@ -1,0 +1,19 @@
+.DS_Store
+.ipynb_checkpoints
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.venv/
+*.pyc
+
+# Data and artifacts
+data/
+!data/README.md
+models/
+reports/
+catboost_info/
+notebooks/original.ipynb
+
+# Build outputs
+dist/
+*.egg-info/

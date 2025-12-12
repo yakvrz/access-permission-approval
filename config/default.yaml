@@ -1,0 +1,33 @@
+data:
+  users: data/users_metadata.csv
+  apps: data/apps_metadata.csv
+  interactions: data/interactions.csv
+  submission: data/submission.csv
+
+artifacts:
+  model_dir: models
+  reports_dir: reports
+
+features:
+  missing_sentinel: "__UNKNOWN__"
+  categorical_columns:
+    - appId
+    - managerId
+    - category
+    - manager_department
+    - manager_office
+    - department_filled
+    - office_filled
+
+model:
+  catboost:
+    iterations: 500
+    learning_rate: 0.05
+    depth: 8
+    l2_leaf_reg: 8
+    random_seed: 42
+  validation:
+    n_splits: 5
+    group_column: userId
+    target_column: permission
+    threshold_strategy: accuracy

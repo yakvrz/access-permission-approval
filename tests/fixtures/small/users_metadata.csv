@@ -1,0 +1,7 @@
+userId,managerId,department,officeLocation,isMachine,seniority
+1,10,engineering,nyc,False,3
+2,10,,sf,False,2
+3,11,finance,ldn,False,4
+4,,,,True,1
+10,,engineering,nyc,False,6
+11,,finance,sf,False,7
