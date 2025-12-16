@@ -18,4 +18,13 @@ train:
 report:
 	$(PYTHON) -m access_perm.report --config config/default.yaml
 
-.PHONY: setup lint format test train report
+pipeline:
+	$(PYTHON) -m access_perm.pipeline train --config config/default.yaml
+
+monitor:
+	$(PYTHON) -m access_perm.pipeline monitor --config config/default.yaml
+
+serve:
+	$(PYTHON) -m uvicorn access_perm.service:app --host 0.0.0.0 --port 8000
+
+.PHONY: setup lint format test train report pipeline monitor serve

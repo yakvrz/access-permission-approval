@@ -113,6 +113,8 @@ def train_model(
     metrics = _compute_metrics(y.values, oof_pred, threshold)
 
     final_iterations = int(np.median(best_iterations)) if best_iterations else model_params.get("iterations", 200)
+    if final_iterations < 1:
+        final_iterations = max(1, model_params.get("iterations", 200))
     if progress_callback:
         progress_callback(f"Training final model for {final_iterations} iterations")
     final_model = CatBoostClassifier(

@@ -9,6 +9,7 @@ import pandas as pd
 from . import config as cfg
 from .data import load_raw_data
 from .features import build_features
+from .monitoring import save_reference_baseline
 from .modeling import TrainingResult, save_model, train_model
 from .reporting import (
     plot_calibration,
@@ -19,6 +20,8 @@ from .reporting import (
     compute_segment_metrics,
     plot_shap_importance,
 )
+from .tracking import log_training_run
+from .validation import validate_features, validate_raw_data
 
 
 def _set_seeds(seed: int = 42) -> None:
@@ -37,6 +40,14 @@ def run_training(config_path: str) -> TrainingResult:
     progress(f"Loaded config from {config_path}")
     raw = load_raw_data(config["data"])
     progress("Loaded raw data")
+    validation_cfg = config.get("validation", {})
+    if validation_cfg.get("enabled", True):
+        validation_dir = Path(config["artifacts"]["validation_dir"])
+        raw_results = validate_raw_data(raw, validation_dir, mostly=validation_cfg.get("mostly", 0.97))
+        if validation_cfg.get("fail_on_error", True) and not all(r.success for r in raw_results):
+            raise ValueError("Raw data validation failed. See reports in validation directory.")
+        progress("Raw data validation passed")
+
     missing_sentinel = config["features"]["missing_sentinel"]
     categorical_columns = config["features"]["categorical_columns"]
     model_params = config["model"]["catboost"]
@@ -45,6 +56,12 @@ def run_training(config_path: str) -> TrainingResult:
 
     progress("Building features")
     feature_bundle = build_features(raw, missing_sentinel=missing_sentinel)
+    if validation_cfg.get("enabled", True):
+        feature_validation = validate_features(feature_bundle, Path(config["artifacts"]["validation_dir"]), mostly=validation_cfg.get("mostly", 0.97))
+        if validation_cfg.get("fail_on_error", True) and not feature_validation.success:
+            raise ValueError("Feature validation failed. See validation reports.")
+        progress("Feature validation passed")
+
     progress("Starting cross-validation training")
     result = train_model(
         X=feature_bundle.X,
@@ -72,7 +89,6 @@ def run_training(config_path: str) -> TrainingResult:
         "metrics": result.metrics,
         "best_iterations": result.best_iterations,
     }
-    cfg.save_metadata(metadata, metadata_path)
 
     progress(f"Writing reports to {reports_dir}")
     save_metrics(result.metrics, reports_dir)
@@ -117,6 +133,21 @@ def run_training(config_path: str) -> TrainingResult:
         feature_names=feature_bundle.feature_columns,
         reports_dir=reports_dir,
         top_n=10,
+    )
+
+    baseline_path = Path(config["monitoring"]["reference_baseline"])
+    save_reference_baseline(feature_bundle, result.oof_pred, baseline_path)
+    metadata["monitoring_reference"] = str(baseline_path)
+    cfg.save_metadata(metadata, metadata_path)
+
+    log_training_run(
+        config=config,
+        config_path=Path(config_path),
+        feature_frame=feature_bundle.X,
+        scores=result.oof_pred,
+        training_result=result,
+        reports_dir=reports_dir,
+        metadata=metadata,
     )
 
     progress("Training complete")

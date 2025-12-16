@@ -21,6 +21,6 @@ def save_metadata(metadata: Dict[str, Any], path: str | Path) -> None:
 def ensure_artifact_dirs(config: Dict[str, Any]) -> None:
     """Create model/report directories if they do not exist."""
     artifacts = config.get("artifacts", {})
-    for key in ("model_dir", "reports_dir"):
+    for key in ("model_dir", "reports_dir", "validation_dir", "monitoring_dir"):
         if key in artifacts:
             Path(artifacts[key]).mkdir(parents=True, exist_ok=True)

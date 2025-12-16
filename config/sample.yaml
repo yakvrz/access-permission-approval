@@ -7,6 +7,8 @@ data:
 artifacts:
   model_dir: models/sample
   reports_dir: reports/sample
+  validation_dir: validation/sample
+  monitoring_dir: monitoring/sample
 
 features:
   missing_sentinel: "__UNKNOWN__"
@@ -31,3 +33,25 @@ model:
     group_column: userId
     target_column: permission
     threshold_strategy: accuracy
+
+tracking:
+  mlflow_tracking_uri: file:./mlruns
+  experiment_name: access-permission-ml-sample
+  register_model_name: access-permission-ml
+  log_inference: false
+
+validation:
+  enabled: true
+  fail_on_error: true
+  mostly: 0.9
+
+monitoring:
+  reference_baseline: monitoring/sample/reference.parquet
+  drift_report_html: monitoring/sample/drift_report.html
+  drift_report_json: monitoring/sample/drift_report.json
+  performance_report_html: monitoring/sample/performance_report.html
+  performance_report_json: monitoring/sample/performance_report.json
+
+service:
+  host: 0.0.0.0
+  port: 8000

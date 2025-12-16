@@ -7,6 +7,8 @@ import pandas as pd
 from access_perm import config as cfg
 from access_perm.data import coerce_apps, coerce_users
 from access_perm.predict import load_trained_model, predict_requests
+from access_perm.tracking import log_inference_metrics
+from access_perm.validation import validate_submission
 
 
 def main():
@@ -30,6 +32,7 @@ def main():
     submission_path = args.input or config["data"]["submission"]
     reports_dir = Path(config["artifacts"]["reports_dir"])
     output_path = Path(args.output) if args.output else reports_dir / "predictions.csv"
+    validation_dir = Path(config["artifacts"]["validation_dir"]) / "inference"
     model_dir = Path(config["artifacts"]["model_dir"])
     model_path = model_dir / "model.cbm"
     metadata_path = model_dir / "metadata.json"
@@ -40,6 +43,12 @@ def main():
     submission_df = pd.read_csv(submission_path)
     users_df = coerce_users(pd.read_csv(config["data"]["users"]))
     apps_df = coerce_apps(pd.read_csv(config["data"]["apps"]))
+
+    validation_cfg = config.get("validation", {})
+    if validation_cfg.get("enabled", True):
+        validation_result = validate_submission(submission_df, validation_dir, mostly=validation_cfg.get("mostly", 0.95))
+        if validation_cfg.get("fail_on_error", True) and not validation_result.success:
+            raise ValueError("Submission failed validation. See validation reports.")
 
     with metadata_path.open() as f:
         metadata = json.load(f)
@@ -60,7 +69,9 @@ def main():
     output["predicted_label"] = labels
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output.to_csv(output_path, index=False)
-    print(json.dumps({"predictions": str(output_path)}, indent=2))
+    approval_rate = float(labels.mean()) if len(labels) else 0.0
+    log_inference_metrics(config, count=len(labels), approval_rate=approval_rate, source="batch-cli", prediction_path=output_path)
+    print(json.dumps({"predictions": str(output_path), "approval_rate": approval_rate}, indent=2))
 
 
 if __name__ == "__main__":
